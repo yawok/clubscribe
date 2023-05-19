@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block content %}
+	<ol>
+		{% for subscription in subscriptions_list %}
+			<li>Subscription name: {{ subscription.name }} | Subscription id: {{ subscription.subscription_id }}</li>
+		{% endfor %}
+	</ol>
+{% endblock content %}
