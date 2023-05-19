@@ -46,3 +46,12 @@ class Membership(models.Model):
 
     def __str__(self):
         return f"{self.subscriber} - {self.club}"
+
+
+class SubscriptionPlan(models.Model):
+    club = models.ForeignKey(Club, null=True, blank=True, on_delete=models.CASCADE)
+    subscription_id = models.CharField(max_length=100)
+    name = models.CharField(max_length=256)
+    
+    def __str__(self):
+        return self.name
