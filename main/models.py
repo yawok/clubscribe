@@ -1,5 +1,5 @@
 from django.contrib.gis.db import models
-from django.contrib.auth.models import User
+from django.contrib.auth.models import AbstractUser, BaseUserManager, PermissionsMixin
 
 
 class Venue(models.Model):
@@ -10,6 +10,41 @@ class Venue(models.Model):
     
     def __str__(self):
         return self.name
+
+
+class UserManager(BaseUserManager):
+    def _create_user(self, first_name, last_name, email, password, **extra_fields):
+        use_in_migrations = True
+        
+        if not email:
+            raise ValueError("Email is required")
+        email = self.normalize_email(email)
+        user = self.model(first_name=first_name, last_name=last_name, email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_user(self, first_name, last_name, email, password, **extra_fields):
+        extra_fields.setdefault('is_staff', False)
+        extra_fields.setdefault('is_superuser', False)
+        return self._create_user(first_name, last_name, email, password, **extra_fields)
+    
+    def create_superuser(self, first_name, last_name, email, password, **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+        return self._create_user(first_name, last_name, email, password, **extra_fields)
+        
+        
+class User(AbstractUser, PermissionsMixin):
+    username = None
+    first_name = models.CharField(max_length=128)
+    last_name = models.CharField(max_length=128)
+    email = models.EmailField(unique=True)
+    
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['first_name', 'last_name']
+
+    objects = UserManager()
 
 
 class Club(models.Model):
@@ -55,3 +90,4 @@ class SubscriptionPlan(models.Model):
     
     def __str__(self):
         return self.name
+    
