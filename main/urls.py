@@ -8,4 +8,7 @@ urlpatterns = [
     path("locations/", views.square_login, name="locations"),
     path("create_subscription/", views.create_subscription, name="create_subscription"),
     path("all_subscriptions/", views.SubscriptionsListView.as_view(), name="all_subscriptions"),
+    path("signup/", views.SignupView.as_view(), name="signup"),
 ]
+
+urlpatterns += [path("accounts/", include("django.contrib.auth.urls")),]

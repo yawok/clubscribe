@@ -1,10 +1,12 @@
 from django.shortcuts import render
+from django.contrib.auth import authenticate, login
 from django.urls import reverse_lazy
 from django.views.generic import FormView, CreateView, ListView
 from . import forms, models
 import logging
 import os, uuid
 from square.client import Client
+from django.contrib import messages
 
 logger = logging.getLogger(__name__)
 
@@ -83,3 +85,25 @@ class SubscriptionsListView(ListView):
     paginate_by = 10
     template_name = "subscriptions_list.html"
     context_object_name = "subscriptions_list"
+
+    
+class SignupView(FormView):
+    template_name = "signup.html"
+    form_class = forms.UserCreationForm
+
+    def get_success_url(self):
+        redirect_to = self.request.GET.get("next", "/")
+        return redirect_to
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        form.save()
+        email = form.cleaned_data.get("email")
+        raw_password = form.cleaned_data.get("password1")
+        logger.info(f"New signup for {email} through SignupView.")
+        user = authenticate(email=email, password=raw_password)
+        login(self.request, user)
+        form.send_mail()
+        messages.info(self.request, "You have signed up successfully.")
+
+        return response
