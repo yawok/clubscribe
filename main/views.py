@@ -1,37 +1,103 @@
+from django.http import HttpResponse
 from django.shortcuts import render
 from django.contrib.auth import authenticate, login
-from django.urls import reverse_lazy
-from django.views.generic import FormView, CreateView, ListView
+from django.urls import reverse_lazy, reverse
+from django.views.generic import FormView, CreateView, ListView, DetailView
 from . import forms, models
+from django.http import HttpResponseRedirect
 import logging
 import os, uuid
 from square.client import Client
 from django.contrib import messages
+from django.conf import settings
+from django.template.defaultfilters import slugify
 
 logger = logging.getLogger(__name__)
 
-client = Client(
-        access_token=os.environ["SANDBOX_ACCESS_TOKEN"], environment="sandbox"
-    )
+client = Client(access_token=os.environ["SANDBOX_ACCESS_TOKEN"], environment="sandbox")
+
 
 class CreateClubView(FormView):
     template_name = "create_club.html"
     form_class = forms.ClubForm
     success_url = reverse_lazy("index")
 
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        form = form.save(commit=False)
+        form.merchant_access_token = ...
+
+
+def authorize(request):
+    """Requests merchant authorization"""
+    if settings.DEBUG:
+        authorize_redirect_url = f"https://connect.squareupsandbox.com/oauth2/authorize?client_id={os.environ['SANDBOX_APPLICATION_ID']}&scope=CUSTOMERS_READ+PAYMENTS_WRITE+SUBSCRIPTIONS_WRITE+ITEMS_READ+ORDERS_WRITE+INVOICES_WRITE"
+    else:
+        authorize_redirect_url = f"https://connect.squareup.com/oauth2/authorize?client_id={os.environ['SANDBOX_APPLICATION_ID']}&scope=CUSTOMERS_READ+PAYMENTS_WRITE+SUBSCRIPTIONS_WRITE+ITEMS_READ+ORDERS_WRITE+INVOICES_WRITE"
+        
+    logger.info(f"Sent autho url: {authorize_redirect_url}")
+    context = {"url": authorize_redirect_url}
+    return render(request, "authorize_merchant.html", context)
+
+
+
+def create_club(request):
+    """Receives merchant authorization code and handles club creation with form"""
+    
+    if request.method != "POST":
+        form = forms.ClubForm()
+    else:
+        form = forms.ClubForm(request.POST)
+        if form.is_valid():
+            merchant_code = request.GET.get("code")
+            result = client.o_auth.obtain_token(
+                body={
+                    "client_id": os.environ['SANDBOX_APPLICATION_ID'],
+                    "client_secret": os.environ['SANDBOX_APPLICATION_SECRET'],
+                    "code": merchant_code,
+                    "grant_type": "authorization_code",
+                }
+            )
+            if result.body: 
+                print(result.body)
+                merchant_id = result.body["merchant_id"]
+                access_token = result.body["access_token"]
+                refresh_token = result.body["refresh_token"]
+                expiry_date = result.body["expires_at"]
+                merchant = models.Merchant.objects.create(merchant_id=merchant_id, access_token=access_token, refresh_token=refresh_token, expiry_date=expiry_date)
+                
+                new_club = form.save(commit=False)
+                club_name = form.cleaned_data['name']
+                new_club.merchant = merchant
+                new_club.owner = request.user
+                new_club.slug = slugify(club_name)
+                new_club.save()
+                return HttpResponseRedirect(reverse("product", args=(new_club.slug,)))
+            else:
+                return render(request, "locations.html", {"error_code": request.error})
+    return render(request, "create_club.html", {"form": form})
+        
+
+class ClubDetailView(DetailView):
+    model = models.Club
+    template_name = "club_detail.html"
+    context_object_name = "club"
+    
 
 def square_login(request):
-    client = Client(
-        access_token=os.environ["SANDBOX_ACCESS_TOKEN"], environment="sandbox"
-    )
+    print
+    # client = Client(
+    #    access_token=os.environ["SANDBOX_ACCESS_TOKEN"], environment="sandbox"
+    # )
 
-    result = client.o_auth.retrieve_token_status(os.environ["SANDBOX_ACCESS_TOKEN"])
+    # result = client.o_auth.authorize(os.environ["SANDBOX_ACCESS_TOKEN"])
 
-    if result.is_success():
-        context = {result.body}
-    elif result.is_error():
-        context = {"error_code": "chaleeeeee!"}
-
+    # if result.is_success():
+    # https://connect.squareup.com/oauth2/authorize?client_id={YOUR_APP_ID}&scope=CUSTOMERS_WRITE+CUSTOMERS_READ&session=false&state=82201dd8d83d23cc8a48caf52b
+    #    context = {result.body}
+    # elif result.is_error():
+    #    context = {"error_code": "chaleeeeee!"}
+    context = {"get": request.GET}
     return render(request, "locations.html", context)
 
 
@@ -66,17 +132,20 @@ def create_subscription(request):
                 }
             )
 
-
         if result.is_success():
             id = result.body["catalog_object"]["id"]
             name = result.body["catalog_object"]["subscription_plan_data"]["name"]
-            subscription = models.SubscriptionPlan.objects.create(subscription_id=id, name=name)
+            subscription = models.SubscriptionPlan.objects.create(
+                subscription_id=id, name=name
+            )
             logger.info(f"{name} Subscription created with id: {id}")
-            return render(request, "subscription_details.html", {"subscription": subscription})
-            
+            return render(
+                request, "subscription_details.html", {"subscription": subscription}
+            )
+
         elif result.is_error():
             print(result.errors)
-        
+
     return render(request, "create_subscription.html", {"form": form})
 
 
@@ -86,7 +155,7 @@ class SubscriptionsListView(ListView):
     template_name = "subscriptions_list.html"
     context_object_name = "subscriptions_list"
 
-    
+
 class SignupView(FormView):
     template_name = "signup.html"
     form_class = forms.UserCreationForm
@@ -107,3 +176,5 @@ class SignupView(FormView):
         messages.info(self.request, "You have signed up successfully.")
 
         return response
+
+

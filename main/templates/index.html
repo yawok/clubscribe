@@ -7,4 +7,9 @@
 		{% endif %}
 		Welcome to Clubscribe
 	</h1>
+	<a href="{% url 'authorize' %}">Authorize</a>
+	<a href="{% url 'login' %}">Login</a>
+	<a href="{% url 'logout' %}">Logout</a>
+	<a href="{% url 'signup' %}">Sign Up</a>
+	<a href="{% url 'create_club' %}">Create a club</a>
 {% endblock content %}
