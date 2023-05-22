@@ -6,6 +6,7 @@ from main import models
 admin.site.register(models.Club)
 admin.site.register(models.Venue)
 admin.site.register(models.Membership)
+admin.site.register(models.Merchant)
 
 
 @admin.register(models.Event)
