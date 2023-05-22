@@ -42,11 +42,17 @@ class User(AbstractUser, PermissionsMixin):
     first_name = models.CharField(max_length=128)
     last_name = models.CharField(max_length=128)
     email = models.EmailField(unique=True)
+    merchant = models.ForeignKey("Merchant", on_delete=models.CASCADE, blank=True, null=True)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["first_name", "last_name"]
 
     objects = UserManager()
+    
+    def is_merchant(self):
+        if self.merchant:
+            return True
+        return False
 
 
 class Merchant(models.Model):
@@ -55,6 +61,8 @@ class Merchant(models.Model):
     refresh_token = models.CharField()
     expiry_date = models.DateTimeField()
 
+    def __str__(self):
+        return self.merchant_id
 
 class ClubManager(models.Manager):
     def get_by_natural_key(self, slug):
@@ -66,9 +74,8 @@ class Club(models.Model):
     slug = models.SlugField(max_length=128)
     description = models.TextField(null=True, blank=True)
     active = models.BooleanField(default=True)
-    owner = models.ForeignKey(User, on_delete=models.CASCADE)
-    merchant = models.ForeignKey(Merchant, on_delete=models.CASCADE)
-
+    owner = models.ForeignKey(User, on_delete=models.PROTECT)
+    
     objects = ClubManager()
 
     def __str__(self):
