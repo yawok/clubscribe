@@ -1,6 +1,6 @@
 from django.http import HttpResponse
 from django.shortcuts import render
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, mixins, decorators
 from django.urls import reverse_lazy, reverse
 from django.views.generic import FormView, CreateView, ListView, DetailView
 from . import forms, models
@@ -28,6 +28,7 @@ class CreateClubView(FormView):
         form.merchant_access_token = ...
 
 
+@decorators.login_required
 def authorize(request):
     """Requests merchant authorization"""
     if settings.DEBUG:
@@ -40,42 +41,55 @@ def authorize(request):
     return render(request, "authorize_merchant.html", context)
 
 
+@decorators.login_required
+def obtain_merchant_token(request):
+    client = Client(access_token=os.environ["SANDBOX_ACCESS_TOKEN"], environment="sandbox")
+    merchant_code = request.GET.get("code")
+    result = client.o_auth.obtain_token(
+        body={
+            "client_id": os.environ['SANDBOX_APPLICATION_ID'],
+            "client_secret": os.environ['SANDBOX_APPLICATION_SECRET'],
+            "code": merchant_code,
+            "grant_type": "authorization_code",
+        }
+    )
+    if result.body: 
+        print(result.body)
+        
+        merchant_id = result.body["merchant_id"]
+        access_token = result.body["access_token"]
+        refresh_token = result.body["refresh_token"]
+        expiry_date = result.body["expires_at"]
+        merchant = models.Merchant.objects.create(merchant_id=merchant_id, access_token=access_token, refresh_token=refresh_token, expiry_date=expiry_date)
+        print(type(request.user), request.user)
+        request.user.merchant = merchant
+        request.user.save()
+        messages.success(request, "Merchant account successfully linked")
+        return HttpResponseRedirect(reverse('index'))
+    messages.warning(request, "Merchant account link unsuccessful") 
+    return HttpResponseRedirect(reverse('index'))
 
+
+@decorators.login_required
 def create_club(request):
     """Receives merchant authorization code and handles club creation with form"""
-    
-    if request.method != "POST":
-        form = forms.ClubForm()
-    else:
-        form = forms.ClubForm(request.POST)
-        if form.is_valid():
-            merchant_code = request.GET.get("code")
-            result = client.o_auth.obtain_token(
-                body={
-                    "client_id": os.environ['SANDBOX_APPLICATION_ID'],
-                    "client_secret": os.environ['SANDBOX_APPLICATION_SECRET'],
-                    "code": merchant_code,
-                    "grant_type": "authorization_code",
-                }
-            )
-            if result.body: 
-                print(result.body)
-                merchant_id = result.body["merchant_id"]
-                access_token = result.body["access_token"]
-                refresh_token = result.body["refresh_token"]
-                expiry_date = result.body["expires_at"]
-                merchant = models.Merchant.objects.create(merchant_id=merchant_id, access_token=access_token, refresh_token=refresh_token, expiry_date=expiry_date)
-                
+    if request.user.is_merchant():
+        if request.method != "POST":
+            form = forms.ClubForm()
+        else:
+            form = forms.ClubForm(request.POST)
+            if form.is_valid():
                 new_club = form.save(commit=False)
                 club_name = form.cleaned_data['name']
-                new_club.merchant = merchant
                 new_club.owner = request.user
                 new_club.slug = slugify(club_name)
                 new_club.save()
-                return HttpResponseRedirect(reverse("product", args=(new_club.slug,)))
-            else:
-                return render(request, "locations.html", {"error_code": request.error})
-    return render(request, "create_club.html", {"form": form})
+                logger.info(f"New club {new_club} has been created by {request.user}")
+                return HttpResponseRedirect(reverse("club_detail", args=(new_club.slug,)))
+        return render(request, "create_club.html", {"form": form})
+    else:
+        logger.info("Redirecting user to authorize Square account")
+        return HttpResponseRedirect(reverse("authorize"))
         
 
 class ClubDetailView(DetailView):
@@ -101,52 +115,57 @@ def square_login(request):
     return render(request, "locations.html", context)
 
 
+@decorators.login_required
 def create_subscription(request):
-    if request.method != "POST":
-        form = forms.CreateSubscriptionForm()
-    else:
-        form = forms.CreateSubscriptionForm(data=request.POST)
-        if form.is_valid():
-            amount = int(form.cleaned_data["amount"]) * 100
-            result = client.catalog.upsert_catalog_object(
-                body={
-                    "idempotency_key": f"{uuid.uuid4()}",
-                    "object": {
-                        "type": "SUBSCRIPTION_PLAN",
-                        "id": "#1",
-                        "subscription_plan_data": {
-                            "name": f"{form.cleaned_data['name']}",
-                            "phases": [
-                                {
-                                    "cadence": f"{form.cleaned_data['period']}",
-                                    "periods": 1,
-                                    "recurring_price_money": {
-                                        "amount": amount,
-                                        "currency": "USD",
-                                    },
-                                    "ordinal": 1,
-                                }
-                            ],
+    
+    if request.user.is_merchant():
+        client = Client(access_token=request.user.merchant.access_token, environment="sandbox")
+        if request.method != "POST":
+            form = forms.CreateSubscriptionForm()
+        else:
+            form = forms.CreateSubscriptionForm(data=request.POST)
+            if form.is_valid():
+                amount = int(form.cleaned_data["amount"]) * 100
+                result = client.catalog.upsert_catalog_object(
+                    body={
+                        "idempotency_key": f"{uuid.uuid4()}",
+                        "object": {
+                            "type": "SUBSCRIPTION_PLAN",
+                            "id": "#1",
+                            "subscription_plan_data": {
+                                "name": f"{form.cleaned_data['name']}",
+                                "phases": [
+                                    {
+                                        "cadence": f"{form.cleaned_data['period']}",
+                                        "periods": 1,
+                                        "recurring_price_money": {
+                                            "amount": amount,
+                                            "currency": "USD",
+                                        },
+                                        "ordinal": 1,
+                                    }
+                                ],
+                            },
                         },
-                    },
-                }
-            )
+                    }
+                )
 
-        if result.is_success():
-            id = result.body["catalog_object"]["id"]
-            name = result.body["catalog_object"]["subscription_plan_data"]["name"]
-            subscription = models.SubscriptionPlan.objects.create(
-                subscription_id=id, name=name
-            )
-            logger.info(f"{name} Subscription created with id: {id}")
-            return render(
-                request, "subscription_details.html", {"subscription": subscription}
-            )
+            if result.is_success():
+                id = result.body["catalog_object"]["id"]
+                name = result.body["catalog_object"]["subscription_plan_data"]["name"]
+                subscription = models.SubscriptionPlan.objects.create(
+                    subscription_id=id, name=name
+                )
+                logger.info(f"{name} Subscription created with id: {id}")
+                return render(
+                    request, "subscription_details.html", {"subscription": subscription}
+                )
 
-        elif result.is_error():
-            print(result.errors)
+            elif result.is_error():
+                print(result.errors)
 
-    return render(request, "create_subscription.html", {"form": form})
+        return render(request, "create_subscription.html", {"form": form})
+    return HttpResponseRedirect(reverse("authorize"))   
 
 
 class SubscriptionsListView(ListView):
@@ -176,5 +195,4 @@ class SignupView(FormView):
         messages.info(self.request, "You have signed up successfully.")
 
         return response
-
 

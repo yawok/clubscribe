@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+
+{% block content %}
+	{{ messages}}
+	<p>Club name: {{ object.name }}</p>
+	<p>Club Description: {{ object.description }}</p>
+	<p>Club owner: {{ object.owner }}</p>
+{% endblock content %}
