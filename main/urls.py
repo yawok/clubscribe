@@ -1,5 +1,5 @@
 from django.urls import path, include
-from django.views.generic import TemplateView, DetailView
+from django.views.generic import TemplateView, DetailView, ListView
 from . import views, models
 
 urlpatterns = [
@@ -10,7 +10,10 @@ urlpatterns = [
     path("all_subscriptions/", views.SubscriptionsListView.as_view(), name="all_subscriptions"),
     path("signup/", views.SignupView.as_view(), name="signup"),
     path("authorize/", views.authorize, name="authorize"),
-    path("club/<slug:slug>/", DetailView.as_view(model=models.Club), name="club_detail")
+    path("obtain_merchant_token/", views.obtain_merchant_token, name="obtain_merchant_token"),
+    path("club/<slug:slug>/", DetailView.as_view(model=models.Club), name="club_detail"),
+    path("clubs/", ListView.as_view(model=models.Club), name="clubs"),
+    
 ]
 
 urlpatterns += [path("accounts/", include("django.contrib.auth.urls")),]
