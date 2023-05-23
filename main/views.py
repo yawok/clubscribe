@@ -1,3 +1,5 @@
+from typing import Any
+from django.db.models.query import QuerySet
 from django.http import HttpResponse
 from django.shortcuts import render
 from django.contrib.auth import authenticate, login, mixins, decorators
@@ -45,7 +47,7 @@ def authorize(request):
 def obtain_merchant_token(request):
     client = Client(access_token=os.environ["SANDBOX_ACCESS_TOKEN"], environment="sandbox")
     merchant_code = request.GET.get("code")
-    result = client.o_auth.obtain_token(
+    oauth_result = client.o_auth.obtain_token(
         body={
             "client_id": os.environ['SANDBOX_APPLICATION_ID'],
             "client_secret": os.environ['SANDBOX_APPLICATION_SECRET'],
@@ -53,15 +55,16 @@ def obtain_merchant_token(request):
             "grant_type": "authorization_code",
         }
     )
-    if result.body: 
-        print(result.body)
+    if oauth_result.body: 
+        merchant_id = oauth_result.body["merchant_id"]
         
-        merchant_id = result.body["merchant_id"]
-        access_token = result.body["access_token"]
-        refresh_token = result.body["refresh_token"]
-        expiry_date = result.body["expires_at"]
-        merchant = models.Merchant.objects.create(merchant_id=merchant_id, access_token=access_token, refresh_token=refresh_token, expiry_date=expiry_date)
-        print(type(request.user), request.user)
+        merchant_info_result = client.merchants.retrieve_merchant(merchant_id=merchant_id)
+        currency = merchant_info_result.body["merchant"]["currency"]
+        
+        access_token = oauth_result.body["access_token"]
+        refresh_token = oauth_result.body["refresh_token"]
+        expiry_date = oauth_result.body["expires_at"]
+        merchant = models.Merchant.objects.create(merchant_id=merchant_id, access_token=access_token, refresh_token=refresh_token, expiry_date=expiry_date, currency=currency)
         request.user.merchant = merchant
         request.user.save()
         messages.success(request, "Merchant account successfully linked")
@@ -116,10 +119,11 @@ def square_login(request):
 
 
 @decorators.login_required
-def create_subscription(request):
-    
+def create_subscription_catalog_item(request, slug):
+    merchant = request.user.merchant
+    club = models.Club.objects.get(slug=slug)
     if request.user.is_merchant():
-        client = Client(access_token=request.user.merchant.access_token, environment="sandbox")
+        client = Client(access_token=merchant.access_token, environment="sandbox")
         if request.method != "POST":
             form = forms.CreateSubscriptionForm()
         else:
@@ -140,7 +144,7 @@ def create_subscription(request):
                                         "periods": 1,
                                         "recurring_price_money": {
                                             "amount": amount,
-                                            "currency": "USD",
+                                            "currency": merchant.currency,
                                         },
                                         "ordinal": 1,
                                     }
@@ -154,7 +158,7 @@ def create_subscription(request):
                 id = result.body["catalog_object"]["id"]
                 name = result.body["catalog_object"]["subscription_plan_data"]["name"]
                 subscription = models.SubscriptionPlan.objects.create(
-                    subscription_id=id, name=name
+                    catalog_item_id=id, name=name, club=club,
                 )
                 logger.info(f"{name} Subscription created with id: {id}")
                 return render(
@@ -173,6 +177,22 @@ class SubscriptionsListView(ListView):
     paginate_by = 10
     template_name = "subscriptions_list.html"
     context_object_name = "subscriptions_list"
+    
+
+
+
+def club_subscriptions_list(request, slug):
+    club = models.Club.objects.get(slug=slug)
+    subscriptions = models.SubscriptionPlan.objects.filter(club=club)
+    plan_ids = [x.catalog_item_id for x in subscriptions]
+    result = client.catalog.batch_retrieve_catalog_objects(
+        body = {
+            "object_ids": plan_ids
+        }
+    )
+    if result.body:
+        ...
+    
 
 
 class SignupView(FormView):
@@ -195,4 +215,3 @@ class SignupView(FormView):
         messages.info(self.request, "You have signed up successfully.")
 
         return response
-

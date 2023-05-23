@@ -37,12 +37,10 @@ class CreateSubscriptionForm(forms.Form):
         ("DAILY", "Daily"),
         ("WEEKLY", "Weekly"),
         ("MONTHLY", "Monthly"),
-    )
-    CURRENCY = (
-        ("USD", "US Dollar"),
-        # ("GHS", "Ghana Cedi"),
+        ("YEARLY", "Yearly")
     )
     name = forms.CharField(max_length=128)
     period = forms.ChoiceField(choices=PERIODS)
     amount = forms.CharField(max_length=4)
-    currency = forms.ChoiceField(choices=CURRENCY)
+    
+

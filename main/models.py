@@ -60,6 +60,7 @@ class Merchant(models.Model):
     access_token = models.CharField()
     refresh_token = models.CharField()
     expiry_date = models.DateTimeField()
+    currency = models.CharField(max_length=5, default="USD")
 
     def __str__(self):
         return self.merchant_id
@@ -110,8 +111,8 @@ class Membership(models.Model):
 
 
 class SubscriptionPlan(models.Model):
-    club = models.ForeignKey(Club, null=True, blank=True, on_delete=models.CASCADE)
-    subscription_id = models.CharField(max_length=100)
+    club = models.ForeignKey(Club, on_delete=models.PROTECT)
+    catalog_item_id = models.CharField(max_length=100)
     name = models.CharField(max_length=256)
 
     def __str__(self):
