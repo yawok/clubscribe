@@ -111,9 +111,11 @@ class Membership(models.Model):
 
 
 class SubscriptionPlan(models.Model):
+    name = models.CharField(max_length=256)
+    price = models.DecimalField(max_digits=4, decimal_places=2)
+    description = models.TextField(null=True, blank=True)
     club = models.ForeignKey(Club, on_delete=models.PROTECT)
     catalog_item_id = models.CharField(max_length=100)
-    name = models.CharField(max_length=256)
 
     def __str__(self):
         return self.name
