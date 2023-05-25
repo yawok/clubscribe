@@ -7,6 +7,8 @@ admin.site.register(models.Club)
 admin.site.register(models.Venue)
 admin.site.register(models.Membership)
 admin.site.register(models.Merchant)
+admin.site.register(models.SubscriptionPlan)
+admin.site.register(models.Customer)
 
 
 @admin.register(models.Event)
