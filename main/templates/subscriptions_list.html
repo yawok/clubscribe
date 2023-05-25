@@ -1,9 +1,15 @@
 {% extends "base.html" %}
 
 {% block content %}
-	<ol>
-		{% for subscription in subscriptions_list %}
-			<li>Subscription name: {{ subscription.name }} | Subscription id: {{ subscription.subscription_id }}</li>
+<ol>
+	{% for subscription in subscriptions_list %}
+		<li>
+			<h1>Club: {{ subscription.club }}</h1>
+			<p>Subscription name: {{ subscription.name }}</p>
+			<p>Description: {{ subscription.description }}</p>
+			<p>Price: {{ subscription.price }} {{ user.merchant.currency }}</p>
+			<hr />
+		</li>
 		{% endfor %}
 	</ol>
 {% endblock content %}
