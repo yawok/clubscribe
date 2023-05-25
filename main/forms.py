@@ -37,10 +37,19 @@ class CreateSubscriptionForm(forms.Form):
         ("DAILY", "Daily"),
         ("WEEKLY", "Weekly"),
         ("MONTHLY", "Monthly"),
-        ("YEARLY", "Yearly")
+        ("ANNUAL", "Annual")
     )
-    name = forms.CharField(max_length=128)
-    period = forms.ChoiceField(choices=PERIODS)
-    amount = forms.CharField(max_length=4)
     
+    name = forms.CharField(max_length=128)
+    description = forms.CharField(max_length=256)
+    period = forms.ChoiceField(choices=PERIODS)
+    price = forms.CharField(max_length=6)
+    club = forms.ModelChoiceField(queryset=None)
+
+    def __init__(self, user, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        queryset = models.Club.objects.filter(owner=user)
+        self.fields["club"].queryset = queryset
+    
+
 
