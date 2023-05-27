@@ -1,8 +1,8 @@
 from typing import Any
 from django.db.models.query import QuerySet
 from django.http import HttpResponse
-from django.shortcuts import render
-from django.contrib.auth import authenticate, login, mixins, decorators
+from django.shortcuts import render, get_list_or_404
+from django.contrib.auth import authenticate, login, mixins, decorators, mixins
 from django.urls import reverse_lazy, reverse
 from django.views.generic import FormView, CreateView, ListView, DetailView
 from . import forms, models
@@ -34,9 +34,9 @@ class CreateClubView(FormView):
 def authorize(request):
     """Requests merchant authorization"""
     if settings.DEBUG:
-        authorize_redirect_url = f"https://connect.squareupsandbox.com/oauth2/authorize?client_id={os.environ['SANDBOX_APPLICATION_ID']}&scope=CUSTOMERS_READ+PAYMENTS_WRITE+SUBSCRIPTIONS_WRITE+ITEMS_READ+ORDERS_WRITE+INVOICES_WRITE"
+        authorize_redirect_url = f"https://connect.squareupsandbox.com/oauth2/authorize?client_id={os.environ['SANDBOX_APPLICATION_ID']}&scope=CUSTOMERS_READ+PAYMENTS_WRITE+SUBSCRIPTIONS_WRITE+ITEMS_READ+ORDERS_WRITE+INVOICES_WRITE+ITEMS_READ+ITEMS_WRITE+MERCHANT_PROFILE_READ"
     else:
-        authorize_redirect_url = f"https://connect.squareup.com/oauth2/authorize?client_id={os.environ['SANDBOX_APPLICATION_ID']}&scope=CUSTOMERS_READ+PAYMENTS_WRITE+SUBSCRIPTIONS_WRITE+ITEMS_READ+ORDERS_WRITE+INVOICES_WRITE"
+        authorize_redirect_url = f"https://connect.squareup.com/oauth2/authorize?client_id={os.environ['SANDBOX_APPLICATION_ID']}&scope=CUSTOMERS_READ+PAYMENTS_WRITE+SUBSCRIPTIONS_WRITE+ITEMS_READ+ORDERS_WRITE+INVOICES_WRITE+ITEMS_READ+ITEMS_WRITE+MERCHANT_PROFILE_READ"
         
     logger.info(f"Sent autho url: {authorize_redirect_url}")
     context = {"url": authorize_redirect_url}
@@ -56,9 +56,14 @@ def obtain_merchant_token(request):
         }
     )
     if oauth_result.body: 
+        print(oauth_result.body["access_token"])
+        client = Client(access_token=oauth_result.body["access_token"], environment="sandbox")
+        print(oauth_result.body)
         merchant_id = oauth_result.body["merchant_id"]
+        print(merchant_id)
         
-        merchant_info_result = client.merchants.retrieve_merchant(merchant_id=merchant_id)
+        merchant_info_result = client.merchants.retrieve_merchant(merchant_id="me")
+        print(merchant_info_result)
         currency = merchant_info_result.body["merchant"]["currency"]
         
         access_token = oauth_result.body["access_token"]
@@ -118,18 +123,20 @@ def square_login(request):
     return render(request, "locations.html", context)
 
 
+
+
 @decorators.login_required
-def create_subscription_catalog_item(request, slug):
+def create_subscription_catalog_item(request):
     merchant = request.user.merchant
-    club = models.Club.objects.get(slug=slug)
+    
     if request.user.is_merchant():
         client = Client(access_token=merchant.access_token, environment="sandbox")
         if request.method != "POST":
-            form = forms.CreateSubscriptionForm()
+            form = forms.CreateSubscriptionForm(request.user)
         else:
-            form = forms.CreateSubscriptionForm(data=request.POST)
+            form = forms.CreateSubscriptionForm(request.user, data=request.POST)
             if form.is_valid():
-                amount = int(form.cleaned_data["amount"]) * 100
+                price = int(float(form.cleaned_data["price"]) * 100)
                 result = client.catalog.upsert_catalog_object(
                     body={
                         "idempotency_key": f"{uuid.uuid4()}",
@@ -143,7 +150,7 @@ def create_subscription_catalog_item(request, slug):
                                         "cadence": f"{form.cleaned_data['period']}",
                                         "periods": 1,
                                         "recurring_price_money": {
-                                            "amount": amount,
+                                            "amount": price,
                                             "currency": merchant.currency,
                                         },
                                         "ordinal": 1,
@@ -154,23 +161,44 @@ def create_subscription_catalog_item(request, slug):
                     }
                 )
 
-            if result.is_success():
-                id = result.body["catalog_object"]["id"]
-                name = result.body["catalog_object"]["subscription_plan_data"]["name"]
-                subscription = models.SubscriptionPlan.objects.create(
-                    catalog_item_id=id, name=name, club=club,
-                )
-                logger.info(f"{name} Subscription created with id: {id}")
-                return render(
-                    request, "subscription_details.html", {"subscription": subscription}
-                )
+                if result.is_success():
+                    id = result.body["catalog_object"]["id"]
+                    name = result.body["catalog_object"]["subscription_plan_data"]["name"]
+                    description = form.cleaned_data["description"]
+                    price = form.cleaned_data["price"]
+                    club = form.cleaned_data["club"]
+                    subscription = models.SubscriptionPlan.objects.create(
+                        catalog_item_id=id, name=name, description=description, price=price, club=club,
+                    )
+                    logger.info(f"{name} Subscription created with id: {id}")
+                    return HttpResponseRedirect(reverse("subscriptions", args=(club.slug,)))
 
-            elif result.is_error():
-                print(result.errors)
+                elif result.is_error():
+                    print(result.errors)
+                    error = "oauth error"
 
         return render(request, "create_subscription.html", {"form": form})
     return HttpResponseRedirect(reverse("authorize"))   
 
+
+def join_club(request, slug):
+    first_name = request.user.first_name
+    last_name = request.user.last_name
+    email = request.user.email
+
+    result = client.customers.create_customer(
+        body = {
+            "idempotency_key": f"{uuid.uuid4()}",
+            "given_name":first_name,
+            "family_name": last_name,
+            "email_address": email,
+        }
+    )
+    
+    club = models.Club.objects.filter(slug=slug)
+    user = request.user
+    customer_id = result.body["customer"]["id"]
+    models.objects.create(club=club, customer_id=customer_id, user=user)
 
 class SubscriptionsListView(ListView):
     model = models.SubscriptionPlan
@@ -178,21 +206,11 @@ class SubscriptionsListView(ListView):
     template_name = "subscriptions_list.html"
     context_object_name = "subscriptions_list"
     
-
-
-
-def club_subscriptions_list(request, slug):
-    club = models.Club.objects.get(slug=slug)
-    subscriptions = models.SubscriptionPlan.objects.filter(club=club)
-    plan_ids = [x.catalog_item_id for x in subscriptions]
-    result = client.catalog.batch_retrieve_catalog_objects(
-        body = {
-            "object_ids": plan_ids
-        }
-    )
-    if result.body:
-        ...
-    
+    def get_queryset(self):
+        slug = self.kwargs['slug']
+        club = models.Club.objects.get(slug=slug)
+        subscriptions = get_list_or_404(models.SubscriptionPlan, club=club)
+        return subscriptions
 
 
 class SignupView(FormView):
