@@ -139,3 +139,9 @@ MEDIA_URL = '/media/'
 LOGIN_REDIRECT_URL = "/"
 
 AUTH_USER_MODEL = 'main.User'
+
+SQUARE = {
+    "ACCESS_TOKEN": os.environ.get("SQUARE_ACCESS_TOKEN", None),
+    "APPLICATION_ID": os.environ.get("SQUARE_APPLICATION_ID", None),
+    "APPLICATION_SECRET": os.environ.get("SQUARE_APPLICATION_SECRET", None),
+}

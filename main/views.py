@@ -13,11 +13,13 @@ from square.client import Client
 from django.contrib import messages
 from django.conf import settings
 from django.template.defaultfilters import slugify
+from .utils.square import Square
 
 logger = logging.getLogger(__name__)
 
 client = Client(access_token=os.environ["SANDBOX_ACCESS_TOKEN"], environment="sandbox")
 
+square_client = Square()
 
 class CreateClubView(FormView):
     template_name = "create_club.html"
@@ -33,43 +35,25 @@ class CreateClubView(FormView):
 @decorators.login_required
 def authorize(request):
     """Requests merchant authorization"""
-    if settings.DEBUG:
-        authorize_redirect_url = f"https://connect.squareupsandbox.com/oauth2/authorize?client_id={os.environ['SANDBOX_APPLICATION_ID']}&scope=CUSTOMERS_READ+PAYMENTS_WRITE+SUBSCRIPTIONS_WRITE+ITEMS_READ+ORDERS_WRITE+INVOICES_WRITE+ITEMS_READ+ITEMS_WRITE+MERCHANT_PROFILE_READ"
-    else:
-        authorize_redirect_url = f"https://connect.squareup.com/oauth2/authorize?client_id={os.environ['SANDBOX_APPLICATION_ID']}&scope=CUSTOMERS_READ+PAYMENTS_WRITE+SUBSCRIPTIONS_WRITE+ITEMS_READ+ORDERS_WRITE+INVOICES_WRITE+ITEMS_READ+ITEMS_WRITE+MERCHANT_PROFILE_READ"
-        
-    logger.info(f"Sent autho url: {authorize_redirect_url}")
-    context = {"url": authorize_redirect_url}
-    return render(request, "authorize_merchant.html", context)
+    if not request.user.is_merchant():
+        authorization_redirect_url = square_client.get_authorization_url()
+        context = {"url": authorization_redirect_url}
+        return render(request, "authorize_merchant.html", context)
+    messages.info(request, "You are already an authorised merchant")
+    return HttpResponseRedirect(reverse("index"))
 
 
 @decorators.login_required
 def obtain_merchant_token(request):
     client = Client(access_token=os.environ["SANDBOX_ACCESS_TOKEN"], environment="sandbox")
     merchant_code = request.GET.get("code")
-    oauth_result = client.o_auth.obtain_token(
-        body={
-            "client_id": os.environ['SANDBOX_APPLICATION_ID'],
-            "client_secret": os.environ['SANDBOX_APPLICATION_SECRET'],
-            "code": merchant_code,
-            "grant_type": "authorization_code",
-        }
-    )
-    if oauth_result.body: 
-        print(oauth_result.body["access_token"])
-        client = Client(access_token=oauth_result.body["access_token"], environment="sandbox")
-        print(oauth_result.body)
-        merchant_id = oauth_result.body["merchant_id"]
-        print(merchant_id)
-        
-        merchant_info_result = client.merchants.retrieve_merchant(merchant_id="me")
-        print(merchant_info_result)
-        currency = merchant_info_result.body["merchant"]["currency"]
-        
-        access_token = oauth_result.body["access_token"]
-        refresh_token = oauth_result.body["refresh_token"]
-        expiry_date = oauth_result.body["expires_at"]
-        merchant = models.Merchant.objects.create(merchant_id=merchant_id, access_token=access_token, refresh_token=refresh_token, expiry_date=expiry_date, currency=currency)
+    merchant_token_info = square_client.obtain_merchant_token(merchant_code)
+    
+    if merchant_token_info: 
+        merchant_square_client = Square(access_token=merchant_token_info.get("access_token"),)
+        merchant_currency = merchant_square_client.get_merchant_currency()
+        merchant_token_info["currency"] = merchant_currency
+        merchant = models.Merchant.objects.create(**merchant_token_info)
         request.user.merchant = merchant
         request.user.save()
         messages.success(request, "Merchant account successfully linked")
@@ -233,3 +217,5 @@ class SignupView(FormView):
         messages.info(self.request, "You have signed up successfully.")
 
         return response
+
+
