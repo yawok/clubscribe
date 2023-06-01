@@ -3,4 +3,5 @@
 {% block content %}
 	<p>Subscription name: {{ subscription.name }}</p>
 	<p>Subscription id: {{ subscription.catalog_item_id }}</p>
+	<button><a href="{% url 'subscribe_to_club' subscription.id %}">Select</a></button>
 {% endblock content %}

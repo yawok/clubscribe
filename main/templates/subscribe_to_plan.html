@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block content %}
+	<h1>Subscribe to: {{plan.club.name}}</h1>
+	<h2>Plan name: {{plan.name}}</h2>
+	<h3>Plan description: {{plan.description}}</h3>
+	<h3>Price: {{plan.price}}</h3>
+	<form action="">
+		{% csrf_token %}
+		<button><a href="{{ url }}">Pay Subscription</a></button>
+	</form>
+
+  
+{% endblock content %}

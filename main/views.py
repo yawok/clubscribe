@@ -1,7 +1,7 @@
 from typing import Any
 from django.db.models.query import QuerySet
 from django.http import HttpResponse
-from django.shortcuts import render, get_list_or_404
+from django.shortcuts import render, get_list_or_404, get_object_or_404
 from django.contrib.auth import authenticate, login, mixins, decorators, mixins
 from django.urls import reverse_lazy, reverse
 from django.views.generic import FormView, CreateView, ListView, DetailView
@@ -45,7 +45,6 @@ def authorize(request):
 
 @decorators.login_required
 def obtain_merchant_token(request):
-    client = Client(access_token=os.environ["SANDBOX_ACCESS_TOKEN"], environment="sandbox")
     merchant_code = request.GET.get("code")
     merchant_token_info = square_client.obtain_merchant_token(merchant_code)
     
@@ -114,56 +113,43 @@ def create_subscription_catalog_item(request):
     merchant = request.user.merchant
     
     if request.user.is_merchant():
-        client = Client(access_token=merchant.access_token, environment="sandbox")
+        merchant_square_client = Square(access_token=merchant.access_token)
         if request.method != "POST":
             form = forms.CreateSubscriptionForm(request.user)
         else:
             form = forms.CreateSubscriptionForm(request.user, data=request.POST)
             if form.is_valid():
                 price = int(float(form.cleaned_data["price"]) * 100)
-                result = client.catalog.upsert_catalog_object(
-                    body={
-                        "idempotency_key": f"{uuid.uuid4()}",
-                        "object": {
-                            "type": "SUBSCRIPTION_PLAN",
-                            "id": "#1",
-                            "subscription_plan_data": {
-                                "name": f"{form.cleaned_data['name']}",
-                                "phases": [
-                                    {
-                                        "cadence": f"{form.cleaned_data['period']}",
-                                        "periods": 1,
-                                        "recurring_price_money": {
-                                            "amount": price,
-                                            "currency": merchant.currency,
-                                        },
-                                        "ordinal": 1,
-                                    }
-                                ],
-                            },
-                        },
-                    }
-                )
-
-                if result.is_success():
-                    id = result.body["catalog_object"]["id"]
-                    name = result.body["catalog_object"]["subscription_plan_data"]["name"]
-                    description = form.cleaned_data["description"]
-                    price = form.cleaned_data["price"]
-                    club = form.cleaned_data["club"]
-                    subscription = models.SubscriptionPlan.objects.create(
-                        catalog_item_id=id, name=name, description=description, price=price, club=club,
-                    )
-                    logger.info(f"{name} Subscription created with id: {id}")
-                    return HttpResponseRedirect(reverse("subscriptions", args=(club.slug,)))
-
-                elif result.is_error():
-                    print(result.errors)
-                    error = "oauth error"
-
+                subscription_arguments = form.cleaned_data
+                subscription_arguments["converted_price"] = price
+                subscription_arguments["currency"] = merchant.currency
+                
+                subscription_data = merchant_square_client.create_subscription_catalog_item(**subscription_arguments)
+                
+                if subscription_data:
+                    subscription = models.SubscriptionPlan.objects.create(**subscription_data)
+                    logger.info(f"{subscription_data.get('name')} Subscription created with id: {subscription_data.get('id')}")
+                    return HttpResponseRedirect(reverse("subscriptions", args=(subscription_data.get("club").slug,)))
         return render(request, "create_subscription.html", {"form": form})
     return HttpResponseRedirect(reverse("authorize"))   
 
+
+@decorators.login_required
+def subscribe_to_club(request, pk):
+    subscription_plan = get_object_or_404(models.SubscriptionPlan, pk=pk)
+    plan_data = {
+        "plan_name": subscription_plan.name,
+        "price": subscription_plan.price,
+        "currency": subscription_plan.club.owner.merchant.currency,
+        "plan_id": subscription_plan.catalog_item_id
+    }
+    payment_url = square_client.create_payment_link(**plan_data)
+    logger.info("Create payment link")
+    context = {"plan": subscription_plan, "url": payment_url}
+    return render(request, "subscribe_to_plan.html", context)
+    return 
+    
+    
 
 def join_club(request, slug):
     first_name = request.user.first_name

@@ -8,12 +8,13 @@ urlpatterns = [
     path("locations/", views.square_login, name="locations"),
     path("create_subscription/", views.create_subscription_catalog_item, name="create_subscription"),
     path("<slug:slug>/subscriptions/", views.SubscriptionsListView.as_view(), name="subscriptions"),
+    path("subscription-details/<int:pk>", DetailView.as_view(model=models.SubscriptionPlan), name="subscription-details"),
     path("signup/", views.SignupView.as_view(), name="signup"),
     path("authorize/", views.authorize, name="authorize"),
     path("obtain_merchant_token/", views.obtain_merchant_token, name="obtain_merchant_token"),
     path("club/<slug:slug>/", DetailView.as_view(model=models.Club), name="club_detail"),
     path("clubs/", ListView.as_view(model=models.Club), name="clubs"),
-    
+    path("subscribe/<int:pk>", views.subscribe_to_club, name="subscribe"),   
 ]
 
 urlpatterns += [path("accounts/", include("django.contrib.auth.urls")),]

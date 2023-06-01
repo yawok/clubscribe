@@ -42,7 +42,6 @@ class Square:
                 "grant_type": "authorization_code",
             }
         )
-
         if result.is_success():
             merchant_token_info = {
                 "access_token": result.body["access_token"],
@@ -56,18 +55,74 @@ class Square:
             logger.error(result.error)
             return None
 
-    def create_payment_link(self, **kwargs):
-        result = self.client.checkout.create_payment_link(
+    def create_subscription_catalog_item(self, **kwargs):
+        name = kwargs.get("name")
+        period = kwargs.get("period")
+        converted_price = kwargs.get("converted_price")
+        currency = kwargs.get("currency")
+
+        result = self.client.catalog.upsert_catalog_object(
             body={
-                "idempotency_key": f"{uuid4}",
-                "quick_pay": {
-                    "name": kwargs["subscription_name"],
-                    "price_money": {
-                        "amount": kwargs["price"],
-                        "currency": kwargs["currency"],
+                "idempotency_key": f"{uuid4()}",
+                "object": {
+                    "type": "SUBSCRIPTION_PLAN",
+                    "id": "#1",
+                    "subscription_plan_data": {
+                        "name": name,
+                        "phases": [
+                            {
+                                "cadence": period,
+                                "periods": 1,
+                                "recurring_price_money": {
+                                    "amount": converted_price,
+                                    "currency": currency,
+                                },
+                                "ordinal": 1,
+                            }
+                        ],
                     },
-                    "location_id": "7WQ0KXC8ZSD90",
                 },
-                "checkout_options": {"subscription_plan_id": "{SUBSCRIPTION_PLAN_ID}"},
             }
         )
+
+        if result.is_success():
+            print(result.body)
+            id = result.body["catalog_object"]["id"]
+            name = result.body["catalog_object"]["subscription_plan_data"]["name"]
+            description = kwargs.get("description")
+            price = kwargs.get("price")
+            club = kwargs.get("club")
+            data = {
+                "catalog_item_id": id,
+                "name": name,
+                "description": description,
+                "price": price,
+                "club": club,
+            }
+            logger.info("Subscription catalog item created")
+            return data
+        else:
+            logger.info("An error occurred while creating subscription catalog item")
+            logger.error(result.errers)
+            return None
+
+    def create_payment_link(self, **kwargs):
+        plan_name = kwargs.get("plan_name")
+        price = kwargs.get("price")
+        currency = kwargs.get("currency")
+        plan_id = kwargs.get("plan_id")
+
+        result = self.client.checkout.create_payment_link(
+            body={
+                "idempotency_key": f"{uuid4()}",
+                "quick_pay": {
+                    "name": plan_name,
+                    "price_money": {"amount": price, "currency": currency},
+                    "location_id": "LNVBKM1QE64DV",
+                },
+                "checkout_options": {"subscription_plan_id": f"{plan_id}"},
+            }
+        )
+        print(result.body)
+        payment_url = result.body["payment_link"]["url"]
+        return payment_url
