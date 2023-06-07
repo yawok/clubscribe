@@ -17,7 +17,7 @@ from .utils.square import Square
 
 logger = logging.getLogger(__name__)
 
-client = Client(access_token=os.environ["SANDBOX_ACCESS_TOKEN"], environment="sandbox")
+# client = Client(access_token=os.environ["SANDBOX_ACCESS_TOKEN"], environment="sandbox")
 
 square_client = Square()
 
