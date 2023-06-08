@@ -14,7 +14,7 @@ urlpatterns = [
     path("authorize/", views.authorize, name="authorize"),
     path("obtain_merchant_token/", views.obtain_merchant_token, name="obtain_merchant_token"),
     path("club/<slug:slug>/", DetailView.as_view(model=models.Club), name="club_detail"),
-    path("clubs/", ListView.as_view(model=models.Club), name="clubs"),
+    path("clubs/", views.ClubListView.as_view(), name="clubs"),
     path("subscribe/<int:pk>", views.subscribe_to_club, name="subscribe"),   
 ]
 
