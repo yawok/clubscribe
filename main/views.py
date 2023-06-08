@@ -40,7 +40,7 @@ def authorize(request):
     """Requests merchant authorization"""
     if not request.user.is_merchant():
         authorization_redirect_url = square_client.get_authorization_url()
-        context = {"url": authorization_redirect_url}
+        context = {"authorization_url": authorization_redirect_url}
         return render(request, "authorize_merchant.html", context)
     messages.info(request, "You are already an authorised merchant")
     return HttpResponseRedirect(reverse("index"))
@@ -85,6 +85,11 @@ def create_club(request):
         logger.info("Redirecting user to authorize Square account")
         return HttpResponseRedirect(reverse("authorize"))
         
+
+class ClubListView(ListView):
+    model = models.Club
+    template_name = "all_clubs.html"
+    context_object_name = "clubs"
 
 class ClubDetailView(DetailView):
     model = models.Club
@@ -148,9 +153,8 @@ def subscribe_to_club(request, pk):
     }
     payment_url = square_client.create_payment_link(**plan_data)
     logger.info("Create payment link")
-    context = {"plan": subscription_plan, "url": payment_url}
+    context = {"plan": subscription_plan, "payment_url": payment_url}
     return render(request, "subscribe_to_plan.html", context)
-    return 
     
     
 
