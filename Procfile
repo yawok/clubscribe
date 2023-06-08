@@ -1,1 +1,1 @@
-web: gunicorn clubscribe.wsgi
+web: python manage.py migrate && gunicorn clubscribe.wsgi
