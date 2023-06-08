@@ -17,9 +17,23 @@ class ClubForm(forms.ModelForm):
 class UserCreationForm(DjangoUserCreationForm):
     class Meta(DjangoUserCreationForm.Meta):
         model = models.User
-        fields = ("first_name", "last_name", "email",)
+        fields = ("first_name", "last_name", "email", "password1", "password2")
         field_classes = {"email": UsernameField}
+        widgets = {
+            "first_name": forms.TextInput(attrs={"class": "form-control", 'placeholder': 'First name'}),
+            "last_name": forms.TextInput(attrs={"class": "form-control", 'placeholder': 'Last name'}),
+            "password1": forms.PasswordInput(attrs={"class": "form-control", 'placeholder': 'Password'}),
+            "password2": forms.PasswordInput(attrs={"class": "form-control", 'placeholder': 'Confirm password'}),
+        }
         
+    def __init__(self, *args, **kwargs):
+        # first call the 'real' __init__()
+        super(DjangoUserCreationForm, self).__init__(*args, **kwargs)
+        self.fields["email"].widget = forms.EmailInput(attrs={"autocomplete": "email", "placeholder": "Email", "class": "form-control"})
+        self.fields['password1'].widget = forms.PasswordInput(attrs={'placeholder': 'Password'})
+        self.fields['password1'].widget.attrs['class'] = 'form-control'
+        self.fields['password2'].widget = forms.PasswordInput(attrs={'placeholder': 'Confirm password'})
+        self.fields['password2'].widget.attrs['class'] = 'form-control'
 
     def send_mail(self):
         logger.info(f"Sending signup email for email={self.cleaned_data['email']}")
