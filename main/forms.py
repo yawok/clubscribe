@@ -32,6 +32,23 @@ class UserCreationForm(DjangoUserCreationForm):
             fail_silently=True,
         )
         
+
+class AuthenticationForm(forms.ModelForm):
+    class Meta:
+        model = models.User
+        fields = ("email", "password")
+        hidden_fields = ("password")
+    
+    def __init__(self, *args, **kwargs):
+        # first call the 'real' __init__()
+        super(AuthenticationForm, self).__init__(*args, **kwargs)
+        # then do extra stuff:
+        self.fields['email'].widget.attrs['placeholder'] = 'Email'
+        self.fields['password'].widget = forms.PasswordInput(attrs={'placeholder': 'Password'})
+        self.fields['email'].widget.attrs['class'] = 'form-control'
+        self.fields['password'].widget.attrs['class'] = 'form-control'
+
+
 class CreateSubscriptionForm(forms.Form):
     PERIODS = (
         ("DAILY", "Daily"),

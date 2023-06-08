@@ -1,18 +1,21 @@
-from typing import Any
-from django.db.models.query import QuerySet
-from django.http import HttpResponse
-from django.shortcuts import render, get_list_or_404, get_object_or_404
-from django.contrib.auth import authenticate, login, mixins, decorators, mixins
-from django.urls import reverse_lazy, reverse
-from django.views.generic import FormView, CreateView, ListView, DetailView
-from . import forms, models
-from django.http import HttpResponseRedirect
 import logging
-import os, uuid
-from square.client import Client
-from django.contrib import messages
+import os
+import uuid
+from typing import Any
+
 from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth import authenticate, decorators, login, mixins
+from django.contrib.auth.forms import AuthenticationForm
+from django.db.models.query import QuerySet
+from django.http import HttpResponse, HttpResponseRedirect
+from django.shortcuts import get_list_or_404, get_object_or_404, render, redirect
 from django.template.defaultfilters import slugify
+from django.urls import reverse, reverse_lazy
+from django.views.generic import CreateView, DetailView, FormView, ListView
+from square.client import Client
+
+from . import forms, models
 from .utils.square import Square
 
 logger = logging.getLogger(__name__)
@@ -205,3 +208,22 @@ class SignupView(FormView):
         return response
 
 
+def login_user(request):
+    if not request.user.is_authenticated:
+        if request.method == 'POST':
+            form = forms.AuthenticationForm(request.POST)
+            email = request.POST['email']
+            password = request.POST['password']
+            user = authenticate(email=email,password=password)
+            if user:
+                if user.is_active:
+                    login(request , user)
+                    return redirect(reverse('index'))
+            
+            
+                    
+        else:
+            form = forms.AuthenticationForm()
+        return render(request,'registration/login.html',{'form':form})
+    else:
+        return redirect(reverse('index'))
