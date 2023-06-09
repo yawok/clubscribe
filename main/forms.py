@@ -8,11 +8,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-class ClubForm(forms.ModelForm):
-    class Meta:
-        model = models.Club
-        fields = ("name", "description", )
-        
         
 class UserCreationForm(DjangoUserCreationForm):
     class Meta(DjangoUserCreationForm.Meta):
@@ -51,17 +46,28 @@ class AuthenticationForm(forms.ModelForm):
     class Meta:
         model = models.User
         fields = ("email", "password")
-        hidden_fields = ("password")
     
     def __init__(self, *args, **kwargs):
-        # first call the 'real' __init__()
         super(AuthenticationForm, self).__init__(*args, **kwargs)
-        # then do extra stuff:
         self.fields['email'].widget.attrs['placeholder'] = 'Email'
         self.fields['password'].widget = forms.PasswordInput(attrs={'placeholder': 'Password'})
         self.fields['email'].widget.attrs['class'] = 'form-control'
         self.fields['password'].widget.attrs['class'] = 'form-control'
 
+
+
+class ClubForm(forms.ModelForm):
+    class Meta:
+        model = models.Club
+        fields = ("name", "description", )
+
+    def __init__(self, *args, **kwargs):
+        super(ClubForm, self).__init__(*args, **kwargs)
+        self.fields['description'].widget = forms.Textarea(attrs={'placeholder': 'Description', "class": "form-control", "rows": "5"})
+        self.fields['name'].widget.attrs['placeholder'] = 'Club name'
+        self.fields['name'].widget.attrs['class'] = 'form-control'
+        self.fields['description'].widget.attrs['class'] = 'form-control'
+        
 
 class CreateSubscriptionForm(forms.Form):
     PERIODS = (
