@@ -1,11 +1,80 @@
 {% extends "base.html" %}
 
+{% load static %}
 {% block content %}
-	{% if messages %}
-		{{ messages}}
-	{% endif %}
-	<p>Club name: {{ object.name }}</p>
-	<p>Club Description: {{ object.description }}</p>
-	<p>Club owner: {{ object.owner }}</p>
-	<p><a href="{% url 'subscriptions' object.slug %}">View subscriptions</a></p>
+{% if messages %}
+{{ messages}}
+{% endif %}
+<p>Club name: {{ object.name }}</p>
+<p>Club Description: {{ object.description }}</p>
+<p>Club owner: {{ object.owner }}</p>
+<p><a href="{% url 'subscriptions' object.slug %}">View subscriptions</a></p>
+<section class="py-4 py-xl-5">
+	<div class="container">
+		<div class="bg-dark border rounded border-0 border-dark overflow-hidden">
+			<div class="row g-0">
+				<div class="col-md-6">
+					<div class="text-white p-4 p-md-5">
+						<h2 class="fw-bold text-white mb-3">KNUST Cactus Club</h2>
+						<p class="mb-4">Join the KNUST Cactus club today. Let's protect and admire cactuses all around the world.</p>
+						<div class="my-3"><a class="btn btn-primary btn-lg me-2" role="button" href="#">Subscribe</a></div>
+					</div>
+				</div>
+				<div class="col-md-6 order-first order-md-last" style="min-height: 250px;"><img class="w-100 h-100 fit-cover"
+						src="{% static 'assets/img/products/3.jpg' %}"></div>
+			</div>
+		</div>
+	</div>
+</section>
+<hr class="hr">
+<section class="py-5 mt-5">
+	<div class="container py-4 py-xl-5">
+		<div class="row mb-5">
+			<div class="col-md-8 col-xl-6 text-center mx-auto">
+				<h2 class="fw-bold text-center">Subscriptions</h2>
+				<p></p>
+			</div>
+		</div>
+		<div>
+			
+			{{ club.subscription.all }}
+			{% for plan in club.subscriptions_set %}
+			
+			<div class="row gy-4 row-cols-1 row-cols-md-2 row-cols-xl-3">
+				<div class="col">
+					<div class="card h-100" style="border: 2px solid gold">
+						<div class="card-body flex-grow-0 p-4"><span class="badge bg-primary text-uppercase mb-2">{{ plan.name}}</span>
+							<h4 class="display-4 fw-bold card-title">{{ plan.price }} {{ club.owner.merchant.currency }}<span class="fs-3 fw-normal text-muted">/year</span></h4>
+						</div>
+						<div class="card-footer d-flex flex-column flex-grow-1 justify-content-between">
+							<div>
+								<ul class="list-unstyled">
+									<li class="d-flex mb-2"><span class="bs-icon-xs bs-icon-rounded bs-icon-primary-light bs-icon me-2"><svg
+												xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 16 16"
+												class="bi bi-check-lg">
+												<path
+													d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425a.247.247 0 0 1 .02-.022Z"></path>
+											</svg></span><span>{{ plan.description }}</span></li>
+									<li class="d-flex mb-2"><span class="bs-icon-xs bs-icon-rounded bs-icon-primary-light bs-icon me-2"><svg
+												xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 16 16"
+												class="bi bi-check-lg">
+												<path
+													d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425a.247.247 0 0 1 .02-.022Z"></path>
+											</svg></span><span>Ante nec venenatis etiam lacinia.</span></li>
+									<li class="d-flex mb-2"><span class="bs-icon-xs bs-icon-rounded bs-icon-primary-light bs-icon me-2"><svg
+												xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 16 16"
+												class="bi bi-check-lg">
+												<path
+													d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425a.247.247 0 0 1 .02-.022Z"></path>
+											</svg></span><span>Porta suscipit netus ad ac.</span></li>
+								</ul>
+							</div><a class="btn btn-primary d-block w-100" role="button" href="#">Button</a>
+						</div>
+					</div>
+				</div>
+			</div>
+			{% endfor %}
+		</div>
+	</div>
+</section>
 {% endblock content %}
