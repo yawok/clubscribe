@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 from pathlib import Path
-import os
+import os, dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -24,7 +24,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get("DJANGO_DEBUG","") == "True"
+DEBUG = os.environ.get("DJANGO_DEBUG", "") == "True"
 
 ALLOWED_HOSTS = ["*"]
 
@@ -33,17 +33,14 @@ ALLOWED_HOSTS = ["*"]
 
 INSTALLED_APPS = [
     "main.apps.MainConfig",
-    
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-
     "django.contrib.gis",
     "django.contrib.postgres",
-    
 ]
 
 MIDDLEWARE = [
@@ -80,16 +77,23 @@ WSGI_APPLICATION = "clubscribe.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.contrib.gis.db.backends.postgis",
-        "NAME": os.environ.get("DB_NAME"),
-        "USER": os.environ.get("DB_USER"),
-        "PASSWORD": os.environ.get("DB_PASSWORD"),
-        'HOST': 'localhost',
-        'PORT': '5432',
+if os.environ.get("RAILWAY_RUN_DB_CONNECT", False) == True:
+    DATABASES = {
+        "default": dj_database_url.config(
+            default=os.environ.get("DATABASE_URL"), conn_max_age=1800
+        ),
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.contrib.gis.db.backends.postgis",
+            "NAME": os.environ.get("DB_NAME", os.environ.get("PGDATABASE")),
+            "USER": os.environ.get("DB_USER", os.environ.get("PGUSER")),
+            "PASSWORD": os.environ.get("DB_PASSWORD", os.environ.get("PGPASSWORD")),
+            "HOST": os.environ.get("PGHOST", "localhost"),
+            "PORT": os.environ.get("PGPORT", "5432"),
+        }
+    }
 
 
 # Password validation
@@ -125,22 +129,21 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
-STATIC_ROOT = 'staticfiles'
+STATIC_ROOT = "staticfiles"
 STATIC_URL = "static/"
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, "static")]
+STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+MEDIA_URL = "/media/"
 
 LOGIN_REDIRECT_URL = "/"
 
-AUTH_USER_MODEL = 'main.User'
+AUTH_USER_MODEL = "main.User"
 
 SQUARE = {
     "ACCESS_TOKEN": os.environ.get("SQUARE_ACCESS_TOKEN", None),
