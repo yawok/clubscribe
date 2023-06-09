@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% load static %}
+<header class="bg-primary-gradient">
+	<!-- Start: Hero Clean Reverse -->
+	<div class="container py-5">
+		<div class="row py-5">
+			<div class="col-md-6 text-center text-md-start d-flex d-sm-flex d-md-flex justify-content-center align-items-center justify-content-md-start align-items-md-center justify-content-xl-end mb-4">
+				<div style="max-width: 450px;">
+					<h1 class="fw-bold">
+						The best solution for
+						<br>
+						you and your
+						<br>
+						club members
+					</h1>
+					<p class="my-3">Create or subscribe to clubs/organizations, manage subscribers and subscriptions and many more.</p>
+
+					<a href="{% url 'create_club' %}">
+						<button class="btn btn-primary shadow">
+							Create a club
+						</button>
+					</a>
+
+					<a href="{% url 'clubs' %}">
+						<button class="btn btn-primary shadow" style="margin-left: 10px">
+							Join a club
+						</button>
+					</a>
+				</div>
+			</div>
+			<div class="col-md-6 mb-4">
+				<div class="p-5 mx-lg-5"
+					style="background: {% static 'assets/img/blob.svg' %} ">
+					<img class="rounded img-fluid shadow w-100 fit-cover"
+						style="min-height: 300px"
+						src="{% static 'assets/img/midjourney6.png' %}">
+				</div>
+			</div>
+		</div>
+		<!-- Start: Projects -->
+		<section class="py-5">
+		</section>
+		<!-- End: Projects -->
+	</div>
+	<!-- End: Hero Clean Reverse -->
+</header>
+<section>
+	<!-- Start: Projects Grid -->
+	<div class="container py-4 py-xl-5">
+		<div class="row mb-5">
+			<div class="col-md-8 col-xl-6 text-center mx-auto">
+				<h2 class="fw-bold">Some popular clubs</h2>
+			</div>
+		</div>
+		<div class="row row-cols-1 row-cols-md-2 mx-auto"
+			style="max-width: 900px">
+			<div class="col mb-4">
+				<div>
+					<a href="#">
+						<img class="rounded img-fluid shadow w-100 fit-cover"
+							src="{% static 'assets/img/products/1.jpg' %}"
+							style="height: 250px">
+					</a>
+					<div class="py-4">
+						<span class="badge bg-primary mb-2">Subscribe</span>
+						<h4 class="fw-bold">Lorem libero donec</h4>
+						<p class="text-muted">
+							Nullam id dolor id nibh ultricies vehicula ut id elit. Cras justo odio, dapibus ac
+							facilisis in, egestas eget quam. Donec id elit non mi porta gravida at eget metus.
+						</p>
+					</div>
+				</div>
+			</div>
+			<div class="col mb-4">
+				<div>
+					<a href="#">
+						<img class="rounded img-fluid shadow w-100 fit-cover"
+							src="{% static 'assets/img/products/2.jpg' %}"
+							style="height: 250px">
+					</a>
+					<div class="py-4">
+						<span class="badge bg-primary mb-2">Subscribe</span>
+						<h4 class="fw-bold">Lorem libero donec</h4>
+						<p class="text-muted">
+							Nullam id dolor id nibh ultricies vehicula ut id elit. Cras justo odio, dapibus ac
+							facilisis in, egestas eget quam. Donec id elit non mi porta gravida at eget metus.
+						</p>
+					</div>
+				</div>
+			</div>
+			<div class="col mb-4">
+				<div>
+					<a href="#">
+						<img class="rounded img-fluid shadow w-100 fit-cover"
+							src="{% static 'assets/img/products/3.jpg' %}"
+							style="height: 250px">
+					</a>
+					<div class="py-4">
+						<span class="badge bg-primary mb-2">Subscribe</span>
+						<h4 class="fw-bold">Lorem libero donec</h4>
+						<p class="text-muted">
+							Nullam id dolor id nibh ultricies vehicula ut id elit. Cras justo odio, dapibus ac
+							facilisis in, egestas eget quam. Donec id elit non mi porta gravida at eget metus.
+						</p>
+					</div>
+				</div>
+			</div>
+			<div class="col mb-4">
+				<div>
+					<a href="#">
+						<img class="rounded img-fluid shadow w-100 fit-cover"
+							src="{% static 'assets/img/products/1.jpg' %}"
+							style="height: 250px">
+					</a>
+					<div class="py-4">
+						<span class="badge bg-primary mb-2">Subscribe</span>
+						<h4 class="fw-bold">Lorem libero donec</h4>
+						<p class="text-muted">
+							Nullam id dolor id nibh ultricies vehicula ut id elit. Cras justo odio, dapibus ac
+							facilisis in, egestas eget quam. Donec id elit non mi porta gravida at eget metus.
+						</p>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<!-- End: Projects Grid -->
+</section>
+<a href="{% url 'authorize' %}">Authorize</a>
+<a href="{% url 'login' %}">Login</a>
+<a href="{% url 'logout' %}">Logout</a>
+<a href="{% url 'signup' %}">Sign Up</a>
+<a href="{% url 'create_club' %}">Create a club</a>
+<a href="{% url 'clubs' %}">All clubs</a>
+<a href="{% url 'create_subscription' %}">Create a subscription</a>
+{% endblock content %}

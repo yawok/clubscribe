@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block content %}
+	{% if messages %}
+		{{ messages}}
+	{% endif %}
+	{% if object_list %}
+		{% for club in object_list %}
+			<p>
+				<a href="{% url 'club_detail' club.slug %} ">
+					Club name: {{ club.name }}
+				</a>
+			</p>
+		<p>Club Description: {{ club.description }}</p>
+		<p>Club owner: {{ club.owner }}</p>
+		<hr />
+		{% endfor %}
+	{% else %}
+		<p>There are no clubs yet</p>
+	{% endif %}
+{% endblock content %}

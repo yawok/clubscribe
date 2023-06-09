@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block content %}
+<ol>
+	{% for subscription in subscriptions_list %}
+	<h1>Club: {{ subscription.club }}</h1>
+		<li>
+			<p>Subscription name: {{ subscription.name }}</p>
+			<p>Description: {{ subscription.description }}</p>
+			<p>Price: {{ subscription.price }} {{ user.merchant.currency }}</p>
+			<a href="{% url 'subscribe' subscription.id %}">Select</a>
+			<hr />
+		</li>
+		{% endfor %}
+	</ol>
+{% endblock content %}

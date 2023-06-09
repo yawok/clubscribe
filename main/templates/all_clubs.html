@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% load static %}
+{% block content %}
+<div class="row row-cols-1 row-cols-md-2 mx-auto"
+style="max-width: 900px">
+{% for club in clubs %}
+	<div class="col mb-4">
+		<div>
+			<a href="{% url 'club_detail' club.slug %} ">
+				<img class="rounded img-fluid shadow w-100 fit-cover"
+					src="{% static '/assets/img/products/1.jpg' %}"
+					style="height: 250px">
+			</a>
+			<div class="py-4">
+				<span class="badge bg-primary mb-2">Subscribe</span>
+				<h4 class="fw-bold">{{ club.name }}</h4>
+				<p class="text-muted">{{ club.description }}</p>
+			</div>
+		</div>
+	</div>
+	{% endfor %}
+</div>
+{% endblock content %}

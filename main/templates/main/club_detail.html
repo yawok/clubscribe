@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block content %}
+	{% if messages %}
+		{{ messages}}
+	{% endif %}
+	<p>Club name: {{ object.name }}</p>
+	<p>Club Description: {{ object.description }}</p>
+	<p>Club owner: {{ object.owner }}</p>
+	<p><a href="{% url 'subscriptions' object.slug %}">View subscriptions</a></p>
+{% endblock content %}
