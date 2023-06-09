@@ -15,9 +15,9 @@
 			<div class="row g-0">
 				<div class="col-md-6">
 					<div class="text-white p-4 p-md-5">
-						<h2 class="fw-bold text-white mb-3">KNUST Cactus Club</h2>
-						<p class="mb-4">Join the KNUST Cactus club today. Let's protect and admire cactuses all around the world.</p>
-						<div class="my-3"><a class="btn btn-primary btn-lg me-2" role="button" href="#">Subscribe</a></div>
+						<h2 class="fw-bold text-white mb-3">{{ club.name }}</h2>
+						<p class="mb-4"> {{ club.description }}</p>
+						<div class="my-3"><a class="btn btn-primary btn-lg me-2" role="button" href="#subscriptions">Subscribe</a></div>
 					</div>
 				</div>
 				<div class="col-md-6 order-first order-md-last" style="min-height: 250px;"><img class="w-100 h-100 fit-cover"
@@ -31,13 +31,13 @@
 	<div class="container py-4 py-xl-5">
 		<div class="row mb-5">
 			<div class="col-md-8 col-xl-6 text-center mx-auto">
-				<h2 class="fw-bold text-center">Subscriptions</h2>
+				<h2 class="fw-bold text-center" id="subscriptions">Subscriptions</h2>
 				<p></p>
 			</div>
 		</div>
 		<div>
 			
-			{{ club.subscription.all }}
+			{{ club.subscription_set.all }}
 			{% for plan in club.subscriptions_set %}
 			
 			<div class="row gy-4 row-cols-1 row-cols-md-2 row-cols-xl-3">
